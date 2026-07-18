@@ -36,17 +36,8 @@ class TikTokBot:
         self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
 
         if session_id:
-            # Cek atribut yang tersedia untuk set cookie di v6.0.1
-            if hasattr(self.client, 'http'):
-                self.client.http.headers["Cookie"] = f"sessionid={session_id}"
-            elif hasattr(self.client, 'web'):
-                self.client.web.headers["Cookie"] = f"sessionid={session_id}"
-            elif hasattr(self.client, '_http'):
-                self.client._http.headers["Cookie"] = f"sessionid={session_id}"
-            else:
-                # Fallback: set via request params
-                import os
-                os.environ["TIKTOK_COOKIE"] = f"sessionid={session_id}"
+            # Di TikTokLive 6.0.1, atribut http client adalah 'web'
+            self.client.web.headers["Cookie"] = f"sessionid={session_id}"
             logger.info("✅ Menggunakan session cookie TikTok")
         else:
             logger.warning("⚠️ Tidak ada TIKTOK_SESSION_ID — mungkin diblokir dari server cloud")
