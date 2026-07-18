@@ -166,8 +166,8 @@ systemctl restart tiktok-bot
 pip install TikTokLive==6.4.5.post1
 ```
 
-**`nano: command not found`**  
-Gunakan `vi` atau buat file langsung dengan `cat > file << 'EOF'`
+**Edit file di server**  
+Bisa pakai `nano .env` untuk edit file secara interaktif.
 
 **Bot tidak connect ke live**  
 Pastikan akun TikTok sedang live saat bot dijalankan.
