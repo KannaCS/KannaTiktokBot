@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Optional
 from groq import AsyncGroq
 from config import GROQ_API_KEY, SYSTEM_PROMPT, BOT_LANGUAGE
 
@@ -54,7 +55,7 @@ def _build_context_summary() -> str:
     return "\n\n".join(parts) if parts else "Live baru dimulai."
 
 
-async def generate_live_comment() -> str | None:
+async def generate_live_comment() -> Optional[str]:
     """
     Generate komentar spontan sebagai penonton live.
     Dipanggil secara berkala selama live berlangsung.
@@ -92,7 +93,7 @@ Don't start with formal greetings. Go straight to a natural comment."""
         return None
 
 
-async def generate_reply(username: str, their_comment: str) -> str | None:
+async def generate_reply(username: str, their_comment: str) -> Optional[str]:
     """
     Generate balasan ke komentar penonton lain.
     """
@@ -133,7 +134,7 @@ You can agree, ask back, or add your opinion. Don't be too formal."""
         return None
 
 
-async def generate_gift_reaction(username: str, gift_name: str, repeat_count: int) -> str | None:
+async def generate_gift_reaction(username: str, gift_name: str, repeat_count: int) -> Optional[str]:
     """
     Generate reaksi saat ada yang kasih gift.
     """
