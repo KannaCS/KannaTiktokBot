@@ -1,0 +1,23 @@
+# Systemd service file untuk TikTok Bot
+# Letakkan di: /etc/systemd/system/tiktok-bot.service
+
+[Unit]
+Description=TikTok Live Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/tiktok-bot
+ExecStart=/home/ubuntu/tiktok-bot/venv/bin/python main.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment file (isi .env kamu di sini)
+EnvironmentFile=/home/ubuntu/tiktok-bot/.env
+
+[Install]
+WantedBy=multi-user.target
