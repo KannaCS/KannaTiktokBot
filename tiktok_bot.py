@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import time
+import os
 from collections import deque
 
 from TikTokLive import TikTokLiveClient
@@ -29,7 +30,19 @@ logger = logging.getLogger(__name__)
 
 class TikTokBot:
     def __init__(self):
-        self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
+        # Baca cookies dari .env jika ada
+        session_id = os.getenv("TIKTOK_SESSION_ID", "")
+
+        if session_id:
+            self.client = TikTokLiveClient(
+                unique_id=f"@{TIKTOK_USERNAME}",
+                cookies={"sessionid": session_id},
+            )
+            logger.info("✅ Menggunakan session cookie TikTok")
+        else:
+            self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
+            logger.warning("⚠️ Tidak ada TIKTOK_SESSION_ID — mungkin diblokir dari server cloud")
+
         self.is_running = False
 
         # Rate limiting
