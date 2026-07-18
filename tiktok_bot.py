@@ -5,7 +5,6 @@ import time
 from collections import deque
 
 from TikTokLive import TikTokLiveClient
-from TikTokLive.client.logger import LogLevel
 from TikTokLive.events import (
     ConnectEvent,
     DisconnectEvent,
@@ -13,7 +12,6 @@ from TikTokLive.events import (
     GiftEvent,
     LikeEvent,
     JoinEvent,
-    ViewerCountUpdateEvent,
     LiveEndEvent,
 )
 
@@ -32,7 +30,6 @@ logger = logging.getLogger(__name__)
 class TikTokBot:
     def __init__(self):
         self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
-        self.client.logger.setLevel(LogLevel.ERROR.value)
         self.is_running = False
 
         # Rate limiting
@@ -60,12 +57,6 @@ class TikTokBot:
         async def on_live_end(event: LiveEndEvent):
             logger.info("🔴 Live telah berakhir.")
             self.is_running = False
-
-        @self.client.on(ViewerCountUpdateEvent)
-        async def on_viewer_update(event: ViewerCountUpdateEvent):
-            count = getattr(event, "viewer_count", 0)
-            ai_responder.set_viewer_count(count)
-            logger.debug(f"👁️ Viewers: {count}")
 
         @self.client.on(JoinEvent)
         async def on_join(event: JoinEvent):
