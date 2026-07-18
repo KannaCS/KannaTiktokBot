@@ -33,14 +33,13 @@ class TikTokBot:
         # Baca cookies dari .env jika ada
         session_id = os.getenv("TIKTOK_SESSION_ID", "")
 
+        self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
+
         if session_id:
-            self.client = TikTokLiveClient(
-                unique_id=f"@{TIKTOK_USERNAME}",
-                cookies={"sessionid": session_id},
-            )
+            # Di TikTokLive 6.0.1, set cookie via http_client setelah inisialisasi
+            self.client.http.headers["Cookie"] = f"sessionid={session_id}"
             logger.info("✅ Menggunakan session cookie TikTok")
         else:
-            self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
             logger.warning("⚠️ Tidak ada TIKTOK_SESSION_ID — mungkin diblokir dari server cloud")
 
         self.is_running = False
