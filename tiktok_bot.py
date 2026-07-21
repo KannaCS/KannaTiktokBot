@@ -24,6 +24,7 @@ from config import (
     REPLY_TO_COMMENTS,
     MAX_REPLIES_PER_MINUTE,
     PLAYWRIGHT_HEADLESS,
+    TIKTOK_SIGN_API_KEY,
 )
 from tiktok_poster import TikTokPoster
 
@@ -33,6 +34,8 @@ logger = logging.getLogger(__name__)
 class TikTokBot:
     def __init__(self):
         self._session_id = os.getenv("TIKTOK_SESSION_ID", "")
+        self._ms_token = os.getenv("TIKTOK_MS_TOKEN", "")
+        self._tt_chain_token = os.getenv("TIKTOK_TT_CHAIN_TOKEN", "")
 
         # TikTokLive client — read-only event stream
         self.client = self._make_client()
@@ -61,10 +64,30 @@ class TikTokBot:
         self._register_events()
 
     def _make_client(self) -> TikTokLiveClient:
-        """Create a fresh TikTokLiveClient with session cookie injected."""
-        client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
+        """Create a fresh TikTokLiveClient with all required cookies and sign key."""
+        from TikTokLive.client.web.web_defaults import TikTokWebDefaults
+
+        # Build the cookies dict — TikTok needs all three to resolve a live room
+        # from a cloud/datacenter IP.
+        cookies: dict = {}
         if self._session_id:
-            client.web.headers["Cookie"] = f"sessionid={self._session_id}"
+            cookies["sessionid"] = self._session_id
+        if self._ms_token:
+            cookies["msToken"] = self._ms_token
+        if self._tt_chain_token:
+            cookies["tt_chain_token"] = self._tt_chain_token
+
+        # Set cookies globally before client creation
+        if cookies:
+            TikTokWebDefaults.web_client_cookies.update(cookies)
+            logger.info(f"🍪 Cookies di-inject: {list(cookies.keys())}")
+
+        # Set sign API key if provided (increases rate limits & reliability)
+        if TIKTOK_SIGN_API_KEY:
+            TikTokWebDefaults.tiktok_sign_api_key = TIKTOK_SIGN_API_KEY
+            logger.info("🔑 Sign API key di-set.")
+
+        client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
         return client
 
     def _register_events(self):

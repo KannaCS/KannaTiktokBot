@@ -25,6 +25,10 @@ MAX_REPLIES_PER_MINUTE = int(os.getenv("MAX_REPLIES_PER_MINUTE", "2"))
 # Set PLAYWRIGHT_HEADLESS=false to see the browser window (useful for debugging)
 PLAYWRIGHT_HEADLESS = os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
 
+# TikTokLive sign API key (optional but strongly recommended on cloud servers)
+# Get a free key at: https://www.eulerstream.com/
+TIKTOK_SIGN_API_KEY = os.getenv("TIKTOK_SIGN_API_KEY", "")
+
 # System prompt untuk AI
 SYSTEM_PROMPT_ID = f"""Kamu adalah {BOT_PERSONA_NAME}, seorang penonton setia TikTok Live yang antusias dan ramah.
 Kamu sedang menonton live streaming dan berkomentar secara natural seperti penonton biasa.
