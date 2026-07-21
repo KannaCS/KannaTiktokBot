@@ -32,13 +32,12 @@ logger = logging.getLogger(__name__)
 
 class TikTokBot:
     def __init__(self):
-        session_id = os.getenv("TIKTOK_SESSION_ID", "")
+        self._session_id = os.getenv("TIKTOK_SESSION_ID", "")
 
         # TikTokLive client — read-only event stream
-        self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
+        self.client = self._make_client()
 
-        if session_id:
-            self.client.web.headers["Cookie"] = f"sessionid={session_id}"
+        if self._session_id:
             logger.info("✅ Session cookie di-inject ke TikTokLive client")
         else:
             logger.warning(
@@ -48,7 +47,7 @@ class TikTokBot:
         # Playwright poster — actually sends comments via a real browser
         self.poster = TikTokPoster(
             username=TIKTOK_USERNAME,
-            session_id=session_id,
+            session_id=self._session_id,
             headless=PLAYWRIGHT_HEADLESS,
         )
 
@@ -61,8 +60,15 @@ class TikTokBot:
         # Register event handlers
         self._register_events()
 
+    def _make_client(self) -> TikTokLiveClient:
+        """Create a fresh TikTokLiveClient with session cookie injected."""
+        client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
+        if self._session_id:
+            client.web.headers["Cookie"] = f"sessionid={self._session_id}"
+        return client
+
     def _register_events(self):
-        """Daftarkan semua event handler."""
+        """Daftarkan semua event handler ke self.client."""
 
         @self.client.on(ConnectEvent)
         async def on_connect(event: ConnectEvent):
@@ -215,11 +221,46 @@ class TikTokBot:
         # Start the Playwright browser first so it's ready when comments are needed
         await self.poster.start()
 
-        try:
-            await self.client.start()
-        except Exception as e:
-            logger.error(f"Gagal connect ke TikTokLive: {e}")
-            raise
+        retry_interval = 30  # seconds between retries when user is not live yet
+        attempt = 0
+
+        while True:
+            attempt += 1
+            try:
+                logger.info(f"🔗 Attempt #{attempt} — connecting to @{TIKTOK_USERNAME} live...")
+                await self.client.start()
+                # client.start() blocks until the live ends or disconnects normally
+                break
+            except Exception as e:
+                # Always log the full repr so the real cause is never hidden
+                logger.error(f"Gagal connect ke TikTokLive (attempt #{attempt}): {e!r}")
+
+                err_str = str(e).lower()
+
+                # An empty / "none" message means TikTok returned an empty room_id —
+                # this happens when the target user is simply not live yet.
+                is_retryable = (
+                    not err_str
+                    or err_str == "none"
+                    or any(
+                        k in err_str
+                        for k in ("not live", "room", "roomid", "not found", "offline")
+                    )
+                )
+
+                if is_retryable:
+                    logger.info(
+                        f"⏳ @{TIKTOK_USERNAME} mungkin belum live — "
+                        f"coba lagi dalam {retry_interval}s..."
+                    )
+                    await asyncio.sleep(retry_interval)
+
+                    # Re-create the client — TikTokLive leaves internal state dirty
+                    # after a failed connect attempt, so we must start fresh.
+                    self.client = self._make_client()
+                    self._register_events()
+                else:
+                    raise
 
     async def stop(self):
         self.is_running = False
