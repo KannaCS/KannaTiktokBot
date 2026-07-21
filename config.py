@@ -21,6 +21,10 @@ COMMENT_MAX_INTERVAL = int(os.getenv("COMMENT_MAX_INTERVAL", "90"))
 REPLY_TO_COMMENTS = os.getenv("REPLY_TO_COMMENTS", "true").lower() == "true"
 MAX_REPLIES_PER_MINUTE = int(os.getenv("MAX_REPLIES_PER_MINUTE", "2"))
 
+# Playwright config
+# Set PLAYWRIGHT_HEADLESS=false to see the browser window (useful for debugging)
+PLAYWRIGHT_HEADLESS = os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
+
 # System prompt untuk AI
 SYSTEM_PROMPT_ID = f"""Kamu adalah {BOT_PERSONA_NAME}, seorang penonton setia TikTok Live yang antusias dan ramah.
 Kamu sedang menonton live streaming dan berkomentar secara natural seperti penonton biasa.

@@ -40,6 +40,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Install Playwright browser (wajib — dilakukan sekali saja)
+
+```bash
+playwright install chromium
+playwright install-deps chromium   # install OS-level deps (Linux)
+```
+
 ---
 
 ## 4. Buat File .env
@@ -49,6 +56,7 @@ Jalankan perintah berikut (ganti nilai yang sesuai):
 ```bash
 cat > .env << 'EOF'
 TIKTOK_USERNAME=KannaCSX
+TIKTOK_SESSION_ID=GANTI_DENGAN_SESSION_ID_KAMU
 GROQ_API_KEY=gsk_GANTI_DENGAN_API_KEY_KAMU
 BOT_PERSONA_NAME=Andi
 BOT_LANGUAGE=id
@@ -56,8 +64,16 @@ COMMENT_MIN_INTERVAL=30
 COMMENT_MAX_INTERVAL=90
 REPLY_TO_COMMENTS=true
 MAX_REPLIES_PER_MINUTE=2
+PLAYWRIGHT_HEADLESS=true
 EOF
 ```
+
+### Cara ambil TIKTOK_SESSION_ID
+
+1. Login TikTok di browser (Chrome/Firefox)
+2. Buka DevTools → **F12**
+3. Tab **Application** → **Cookies** → `https://www.tiktok.com`
+4. Cari cookie bernama `sessionid` dan copy nilainya
 
 > **Catatan:** Dapatkan Groq API key baru di https://console.groq.com/keys
 
@@ -177,3 +193,17 @@ Pastikan virtual environment aktif:
 ```bash
 source venv/bin/activate
 ```
+
+**Komentar tidak terkirim / chat input tidak ditemukan**  
+TikTok kadang mengubah selector HTML-nya. Buka bot dengan `PLAYWRIGHT_HEADLESS=false`,
+lihat elemen chat input, lalu update `CHAT_INPUT_SELECTOR` dan `SEND_BUTTON_SELECTOR`
+di `tiktok_poster.py` sesuai yang ada di halaman.
+
+**Playwright tidak bisa launch di server (missing libs)**  
+```bash
+playwright install-deps chromium
+```
+
+**Debug — lihat apa yang dilakukan browser**  
+Set `PLAYWRIGHT_HEADLESS=false` di `.env`. Browser Chromium akan terbuka secara
+visible sehingga kamu bisa lihat prosesnya secara langsung.

@@ -23,30 +23,40 @@ from config import (
     COMMENT_MAX_INTERVAL,
     REPLY_TO_COMMENTS,
     MAX_REPLIES_PER_MINUTE,
+    PLAYWRIGHT_HEADLESS,
 )
+from tiktok_poster import TikTokPoster
 
 logger = logging.getLogger(__name__)
 
 
 class TikTokBot:
     def __init__(self):
-        # Baca cookies dari .env jika ada
         session_id = os.getenv("TIKTOK_SESSION_ID", "")
 
+        # TikTokLive client — read-only event stream
         self.client = TikTokLiveClient(unique_id=f"@{TIKTOK_USERNAME}")
 
         if session_id:
-            # Di TikTokLive 6.0.1, atribut http client adalah 'web'
             self.client.web.headers["Cookie"] = f"sessionid={session_id}"
-            logger.info("✅ Menggunakan session cookie TikTok")
+            logger.info("✅ Session cookie di-inject ke TikTokLive client")
         else:
-            logger.warning("⚠️ Tidak ada TIKTOK_SESSION_ID — mungkin diblokir dari server cloud")
+            logger.warning(
+                "⚠️  TIKTOK_SESSION_ID kosong — event stream mungkin diblokir dari cloud"
+            )
+
+        # Playwright poster — actually sends comments via a real browser
+        self.poster = TikTokPoster(
+            username=TIKTOK_USERNAME,
+            session_id=session_id,
+            headless=PLAYWRIGHT_HEADLESS,
+        )
 
         self.is_running = False
 
         # Rate limiting
         self.last_comment_time = 0
-        self.reply_timestamps = deque()
+        self.reply_timestamps: deque = deque()
 
         # Register event handlers
         self._register_events()
@@ -106,7 +116,6 @@ class TikTokBot:
         @self.client.on(GiftEvent)
         async def on_gift(event: GiftEvent):
             try:
-                # Hanya proses gift yang streak-nya sudah selesai
                 streakable = getattr(event.gift, "streakable", False)
                 streak_ending = getattr(event, "streak_ending", True)
                 if streakable and not streak_ending:
@@ -124,6 +133,10 @@ class TikTokBot:
             except Exception as e:
                 logger.debug(f"Gift event error: {e}")
 
+    # ------------------------------------------------------------------
+    # Rate-limiting helpers
+    # ------------------------------------------------------------------
+
     def _can_comment(self) -> bool:
         elapsed = time.time() - self.last_comment_time
         return elapsed >= COMMENT_MIN_INTERVAL
@@ -140,6 +153,10 @@ class TikTokBot:
     def _record_reply(self):
         self.reply_timestamps.append(time.time())
         self._record_comment()
+
+    # ------------------------------------------------------------------
+    # Comment generation tasks
+    # ------------------------------------------------------------------
 
     async def _auto_comment_loop(self):
         logger.info("🤖 Auto-comment loop dimulai.")
@@ -178,20 +195,30 @@ class TikTokBot:
             await self._post_comment(reaction)
             self._record_comment()
 
+    # ------------------------------------------------------------------
+    # Actual comment posting (via Playwright)
+    # ------------------------------------------------------------------
+
     async def _post_comment(self, text: str):
-        """
-        Log komentar yang ingin dikirim.
-        TikTokLive library bersifat READ-ONLY — hanya bisa membaca event.
-        Untuk kirim komentar sungguhan, butuh TikTok Creator API atau Selenium.
-        """
-        logger.info(f"📤 [BOT COMMENT]: {text}")
+        """Send a comment to TikTok Live chat via the Playwright browser."""
+        success = await self.poster.post_comment(text)
+        if not success:
+            logger.warning(f"⚠️  Komentar gagal terkirim: {text}")
+
+    # ------------------------------------------------------------------
+    # Bot lifecycle
+    # ------------------------------------------------------------------
 
     async def start(self):
         logger.info(f"🚀 Menghubungkan ke live @{TIKTOK_USERNAME}...")
+
+        # Start the Playwright browser first so it's ready when comments are needed
+        await self.poster.start()
+
         try:
             await self.client.start()
         except Exception as e:
-            logger.error(f"Gagal connect: {e}")
+            logger.error(f"Gagal connect ke TikTokLive: {e}")
             raise
 
     async def stop(self):
@@ -200,4 +227,5 @@ class TikTokBot:
             await self.client.disconnect()
         except Exception:
             pass
+        await self.poster.stop()
         logger.info("Bot dihentikan.")
